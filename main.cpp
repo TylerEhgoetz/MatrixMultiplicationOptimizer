@@ -1,3 +1,4 @@
+#include <chrono>
 #include <iostream>
 #include <vector>
 
@@ -49,7 +50,27 @@ Matrix tiledMultiply(const Matrix& A, const Matrix& B, size_t blockSize)
     return C;
 }
 
-void benchmarkMatrixMultiplication();
+void benchmarkMatrixMultiplication()
+{
+    const size_t n          = 512;
+    const size_t block_size = 64;
+    Matrix       A(n, std::vector<double>(n, 1.0));
+    Matrix       B(n, std::vector<double>(n, 1.0));
+
+    auto   startNaive = std::chrono::high_resolution_clock::now();
+    Matrix C_naive    = naiveMultiply(A, B);
+    auto   endNaive   = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> durationNaive = endNaive - startNaive;
+    std::cout << "Naive multiplication time: " << durationNaive.count()
+              << " seconds\n";
+
+    auto   startTiled = std::chrono::high_resolution_clock::now();
+    Matrix C_tiled    = tiledMultiply(A, B, block_size);
+    auto   endTiled   = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> durationTiled = endTiled - startTiled;
+    std::cout << "Tiled multiplication time: " << durationTiled.count()
+              << " seconds\n";
+}
 
 int main()
 {
