@@ -1,5 +1,6 @@
 #include <chrono>
 #include <iostream>
+#include <random>
 #include <vector>
 
 using Matrix = std::vector<std::vector<double>>;
@@ -50,30 +51,60 @@ Matrix tiledMultiply(const Matrix& A, const Matrix& B, size_t blockSize)
     return C;
 }
 
-void benchmarkMatrixMultiplication()
+void benchmarkMatrixMultiplication(
+    const Matrix& A, const Matrix& B, int iterations, size_t blockSize
+)
 {
-    const size_t n          = 512;
-    const size_t block_size = 64;
-    Matrix       A(n, std::vector<double>(n, 1.0));
-    Matrix       B(n, std::vector<double>(n, 1.0));
+    using namespace std::chrono;
+    double totalTimeNaive = 0.0;
+    double totalTimeTiled = 0.0;
 
-    auto   startNaive = std::chrono::high_resolution_clock::now();
-    Matrix C_naive    = naiveMultiply(A, B);
-    auto   endNaive   = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> durationNaive = endNaive - startNaive;
-    std::cout << "Naive multiplication time: " << durationNaive.count()
-              << " seconds\n";
+    for (int iter{ 0 }; iter < iterations; ++iter)
+    {
+        auto   start = high_resolution_clock::now();
+        Matrix C     = naiveMultiply(A, B);
+        auto   end   = high_resolution_clock::now();
+        totalTimeNaive += duration_cast<duration<double>>(end - start).count();
+    }
 
-    auto   startTiled = std::chrono::high_resolution_clock::now();
-    Matrix C_tiled    = tiledMultiply(A, B, block_size);
-    auto   endTiled   = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> durationTiled = endTiled - startTiled;
-    std::cout << "Tiled multiplication time: " << durationTiled.count()
-              << " seconds\n";
+    for (int iter{ 0 }; iter < iterations; ++iter)
+    {
+        auto   start = high_resolution_clock::now();
+        Matrix C     = tiledMultiply(A, B, blockSize);
+        auto   end   = high_resolution_clock::now();
+        totalTimeTiled += duration_cast<duration<double>>(end - start).count();
+    }
+
+    std::cout << "Average time for naive multiplication: "
+              << (totalTimeNaive / iterations) << " seconds over " << iterations
+              << " iterations\n";
+    std::cout << "Average time for tiled multiplication: "
+              << (totalTimeTiled / iterations) << " seconds over " << iterations
+              << " iterations with block size " << blockSize << "\n";
+    std::cout << "Speedup: " << (totalTimeNaive / totalTimeTiled) << "x\n";
 }
 
 int main()
 {
-    benchmarkMatrixMultiplication();
+    const size_t n{ 1024 };         // Size of the matrix
+    const size_t blockSize{ 64 };   // Block size for tiled multiplication
+    const int    iterations{ 5 };   // Number of iterations for benchmarking
+
+    // Initialize matrices A and B with random values
+    Matrix                                 A(n, std::vector<double>(n));
+    Matrix                                 B(n, std::vector<double>(n));
+    std::random_device                     rd;
+    std::mt19937                           gen(rd());
+    std::uniform_real_distribution<double> dis(0.0, 1.0);
+    for (size_t i{ 0 }; i < n; ++i)
+    {
+        for (size_t j{ 0 }; j < n; ++j)
+        {
+            A[i][j] = dis(gen);
+            B[i][j] = dis(gen);
+        }
+    }
+    // Benchmark the matrix multiplication
+    benchmarkMatrixMultiplication(A, B, iterations, blockSize);
     return 0;
 }
